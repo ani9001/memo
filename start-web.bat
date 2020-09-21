@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 
-(echo version: '3.8'
+(echo version: '3'
  echo services:
  echo  web:
  echo   image: httpd:alpine
