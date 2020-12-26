@@ -1,0 +1,155 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#111">
+<link rel="icon" href="./favicon.ico"><link rel="icon" type="image/png" sizes="192x192" href="./android-icon-192x192.png">
+<meta name="referrer" content="no-referrer"><title>editor</title><style>
+body  { background-color:#111; color:#dda; margin:2px }
+input { background-color:#444; border:none; padding:6px 10px; margin:6px 8px; }
+button{ background-color:#44a; border:none; padding:7px 18px; margin:6px 6px; font-size:12px; color:#ddd; text-align:center; text-decoration:none;
+ cursor:pointer; box-shadow:0 4px #666; display:inline-block; border-radius:4px; }
+button:active  { box-shadow:0 1px #444; transform:translateY(3px); }
+a     { background-color:#336; border:none; padding:4px  8px; margin:4px 6px; font-size:12px; color:#bbd; text-align:center; text-decoration:none;
+ cursor:pointer; box-shadow:0 3px #555; display:inline-block; border-radius:3px; }
+a:active       { box-shadow:0 1px #333; transform:translateY(2px); }
+#status{ padding:5px; font-weight:bold; }
+</style></head><body>
+<div id="editor" style="height:300px;width:80%;min-width:320px"></div><button id="save" type="button" onclick="saveIfUnmodByAnother()">save</button>
+<input id="p" type="password" size="18" placeholder="pw" ondblclick="this.readOnly='';"><button id="l" type="button" onclick="load()">load</button>
+<a id="dl" onclick="dl()">download</a><div id="status">loading...</div>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/ace.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js"></script>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.485.0.min.js"></script>
+<script>
+var minPwLen = 3;
+var minSaveLen = 1;
+var autoSaveMinLen = 512;
+var lastModified = 0;
+var delayDblTap = 700; //ms
+var editor = ace.edit("editor", { theme:"ace/theme/twilight", showPrintMargin:false });
+define("DynHighlightRules", [], (require, exports, module) => {
+ "use strict";
+ var oop = require("ace/lib/oop");
+ var TextHighlightRules = require("ace/mode/text_highlight_rules").TextHighlightRules;
+ var DynHighlightRules = function() {
+  this.setKeywords = function(kwMap) { this.keywordRule.onMatch = this.createKeywordMapper(kwMap, "identifier"); }
+  this.keywordRule = { regex:"\\w+", onMatch:() => "text" }
+  this.$rules = { "start":[
+    { token:"comment", regex:"//", next:[{ token:"comment", regex:/$/, next:"start" }, { defaultToken:"comment" }] },
+    { token:"comment", regex:"\\/\\*", next:[{ token:"comment", regex:"\\*\\/", next:"start" }, { defaultToken:"comment" }] },
+    { token:"string", start:'"', end:'"', next:[{ token:"constant.language.escape.lsl", regex:/\\[tn"\\]/ }] },
+    { token:"string", start:"\\(", end:"\\)", next:[{ token:"constant.language.escape.lsl", regex:/\\[tn\)\\]/ }] },
+    { token:"string", start:"\\[", end:"\\]", next:[{ token:"constant.language.escape.lsl", regex:/\\[tn\]\\]/ }] },
+    { token:"keyword.operator", regex:"->|=>|=|:|→|<-|<=|←|↑|↓", next:[{ token:"string", regex:"[^,; ]+", next:"start" }] },
+    { token:"keyword.operator", regex:/\.\.(?!\.)|-|\+|\*|\/|&&|\|\||x(?=\d| )|\\|\$|～|＋|－|×|÷|○|●|□|■|◇|◆|△|▲|▽|▼|／|・|…/ },
+    { token:"constant.numeric", regex:/\d/ },
+    this.keywordRule] };
+  this.normalizeRules();
+ };
+ oop.inherits(DynHighlightRules, TextHighlightRules);
+ exports.DynHighlightRules = DynHighlightRules;
+});
+var TextMode = require("ace/mode/text").Mode;
+var dynamicMode = new TextMode();
+dynamicMode.HighlightRules = require("DynHighlightRules").DynHighlightRules;
+editor.session.setMode(dynamicMode);
+var urlParam = location.hash.substring(1) || location.search.substring(1);
+if (urlParam) document.title = urlParam; else urlParam = "memo.txt";
+var filename = "file/editor/" + urlParam;
+$(window).on('beforeunload', e => { if ($('#save').data("isSaveNeeded")) return 'save needed.'; });
+$(window).on("resize orientationchange", e => {
+ var ua = navigator.userAgent.toLowerCase();
+ if      (ua.indexOf('iphone') > 0 || (ua.indexOf('android') > 0 && ua.indexOf('mobile') > 0))   $('head').prepend('<meta name="viewport" content="width=330">');
+ else if (ua.indexOf('ipad') > 0   || (ua.indexOf('android') > 0 && ua.indexOf('mobile') == -1)) $('head').prepend('<meta name="viewport" content="width=540">');
+}).trigger("resize");
+$(window).on('load', () => { s3(); showStatus('ready.', '#8ff', 900); });
+$("#p").keypress(e => { if (e.which == 13 && !editor.getSession().getValue().length) $("#l").click(); });
+$("#editor").data("dblTap", false).click(() => {
+ if ($("#editor").data("dblTap")) {
+  editor.setReadOnly(false);
+  $("#editor").data("dblTap", false);
+  showStatus("unlocked.", "#f8f", 900);
+ } else if (editor.getReadOnly()) {
+  $("#editor").data("dblTap", true);
+  setTimeout(() => {
+   $("#editor").data("dblTap", false);
+   if (editor.getReadOnly()) showStatus("locked, pls dblclick/dbltap or Ctrl-L to unlock.", "#8af", 900);
+  }, delayDblTap);
+ }
+});
+editor.commands.addCommand({ name:'save', bindKey:{ win:'Ctrl-S', mac:'Command-S' }, readOnly:false, exec:editor => saveIfUnmodByAnother() });
+editor.commands.addCommand({ name:'quit', bindKey:{ win:'Ctrl-Q', mac:'Command-Q' }, readOnly:true,  exec:editor => window.open('about:blank', '_self').close() });
+editor.commands.addCommand({ name:'lock', bindKey:{ win:'Ctrl-L', mac:'Command-L' }, readOnly:true,  exec:editor => editor.setReadOnly(!editor.getReadOnly()) });
+var s3 = () => {
+ AWS.config.region = "ap-northeast-1";
+ AWS.config.credentials = new AWS.CognitoIdentityCredentials({ IdentityPoolId:"ap-northeast-1:uuid" });
+ AWS.config.credentials.get(e => { if(e) AWS.config.credentials.clearCachedId(); });
+ return new AWS.S3({ params:{ Bucket:"bucketname" } });
+}
+const showStatus = (t, c = '#8fa', d = 300) => $('#status').text(t).css('color', c).stop(true, true).fadeIn("fast", () => $('#status').delay(d).fadeOut("fast"));
+function saveNeeded(isNeeded, color = '#f82') {
+ if (isNeeded) { $('#save').data("isSaveNeeded", true ).css({ 'color':color,  'font-weight':'bold' });   isSaveNeeded = true;
+ } else        { $('#save').data("isSaveNeeded", false).css({ 'color':'#ddd', 'font-weight':'normal' }); isSaveNeeded = false;
+ }
+}
+function checkLastModified(callback = () => { }, errCallback = () => { }, load = false) {
+ s3().getObjectTagging({ Key:filename },
+  (err, data) => {
+   if (data != null) {
+    var mtimeTag = data.TagSet.filter(tag => tag.Key == "mtime");
+    if (mtimeTag.length) {
+     if (load) lastModified = mtimeTag[0].Value;
+     else if (lastModified != mtimeTag[0].Value) { showStatus("modified by another. can't save.", "red", 900); errCallback(); return; }
+     callback();
+    } else if (!load) callback();
+   } else {
+    if (load) lastModified = -1;
+    else if (err.statusCode == 403) callback();
+   }
+  });
+}
+const saveIfUnmodByAnother = () => checkLastModified(() => { save(); saveNeeded(false); }, () => saveNeeded(true, "red"));
+function save() {
+ if ($('#p').val().length < minPwLen) { showStatus("pw too short!", "red", 900); return; }
+ if (!editor.getSession().getValue().length) { showStatus("not saved! pw input, but no text.", "red", 900); return; }
+ var tmpLastModified = (new Date).toISOString();
+ s3().putObject({ Key:filename, Body:CryptoJS.AES.encrypt(editor.getSession().getValue(), $('#p').val()).toString(), Tagging:"mtime=" + tmpLastModified }, (err, data) => {
+  if (data != null) {
+   autoSaveMinLen = editor.getSession().getValue().length + minSaveLen;
+   saveNeeded(false);
+   lastModified = tmpLastModified;
+   $('#p').attr('readOnly', true);
+   editor.focus();
+   showStatus("saved.");
+  } else showStatus("failed!", "red", 900);
+ });
+}
+function load() {
+ if ($('#p').val().length < minPwLen) { showStatus("pw too short!", "red", 900); return; }
+ if ($('#save').data("isSaveNeeded") && !window.confirm('lost changes, ok?')) return;
+ s3().getObject({ Key:filename, ResponseCacheControl:'no-cache' }, (err, data) => {
+  if (data != null) {
+   editor.getSession().off('change', update);
+   editor.session.setValue(CryptoJS.AES.decrypt(data.Body.toString(), $('#p').val()).toString(CryptoJS.enc.Utf8));
+   autoSaveMinLen = editor.getSession().getValue().length + minSaveLen;
+   $('#p').attr('readOnly', true);
+   checkLastModified(() => { }, () => { }, true);
+   editor.setReadOnly(true)
+   editor.getSession().on('change', update);
+   editor.focus();
+   saveNeeded(false);
+   showStatus("loaded.");
+  } else showStatus("failed!", "red", 900);
+ });
+}
+var update = (() => {
+ var timer;
+ return () => {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+   if ($('#p').val().length < minPwLen) return;
+   if (editor.getSession().getValue().length < autoSaveMinLen) { saveNeeded(true); showStatus("save needed...", "#fa6", 600); return; }
+   saveIfUnmodByAnother();
+  }, 600);
+ };
+})();
+const dl = () => $('#dl').attr({ download:urlParam, href:window.URL.createObjectURL(new Blob([editor.getSession().getValue()], { type:"text/plain" })) });
+</script></body></html>
