@@ -30,7 +30,7 @@ static void vLEDtask(void *pvParams) {
         for (unsigned int z = 0; z < numsZ; z++) {
           clearLED();
           digitalWrite(pinsZ[z], HIGH);
-          for (unsigned int xy = 0; xy < numsXY; xy++) digitalWrite(pinsXY[xy], (animation[s] >> (z * 9 + xy) & 0x01) ? LOW : HIGH);
+          for (unsigned int xy = 0; xy < numsXY; xy++) digitalWrite(pinsXY[xy], (animation[s] >> (numsXY * z + xy) & 0x01) ? LOW : HIGH);
           vTaskDelay(1);
         }
       }
