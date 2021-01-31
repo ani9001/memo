@@ -12,7 +12,7 @@ const float minMag =  1.0;
 const float maxMag = 10.0;
 const unsigned int cubeMaxValue = 100;
 const float dirScale = 100.0;
-int interval = 48;
+unsigned int interval = 48;
 
 const unsigned int numsZ  = sizeof(pinsZ)  / sizeof(pinsZ[0]);
 const unsigned int numsXY = sizeof(pinsXY) / sizeof(pinsXY[0]);
@@ -86,7 +86,7 @@ void vLEDchangePos(void *pvParams) {
 
 void vLEDchangeInt(void *pvParams) {
   while (1) {
-    if (button0.read() > 120 && (interval <<= 1) > 200) interval = 12;
+    if (button0.read() > 120 && (interval <<= 1) > 200) interval = 3;
     vTaskDelay(2000);
   }
 }
