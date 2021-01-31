@@ -60,7 +60,8 @@ void vLEDchangePos(void *pvParams) {
         float dx = mag * ((float)(xy / numsZ) - pos[0]);
         float dy = mag * ((float)(xy % numsZ) - pos[1]);
         float dz = mag * ((float)z - pos[2]);
-        cubeValue[z][xy] = cubeMaxValue / (dx * dx + dy * dy + dz * dz);
+        float dist = dx * dx + dy * dy + dz * dz;
+        cubeValue[z][xy] = cubeMaxValue / (dist < 1 ? 1 : dist);
       }
     }
     for (unsigned int i = 0; i < 3; i++) {
