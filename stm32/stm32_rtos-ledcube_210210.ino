@@ -8,7 +8,7 @@ const uint8 pinsXY[] = { PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PA8 }; //only G
 
 const unsigned int speedTimer = 10000;
 const unsigned int minInterval = 3;
-const unsigned int maxInterval = 3 << 6;
+const unsigned int maxInterval = minInterval << 6;
 const unsigned int cubeMaxValue = 100;
 const int minMag =  1 << 7;
 const int maxMag = 10 << 7;
@@ -48,7 +48,7 @@ void setup() {
   sCmd.addCommand("*", []() { enAutoChgSpeed = 1; Serial.println(interval); });
   sCmd.setDefaultHandler([](const char *c) { Serial.println("cmd: <1|0|+|-|*>"); });
 
-  xTaskCreate(vLEDshow,      "led", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, NULL);
+  xTaskCreate(vLEDshow,      "led", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
   xTaskCreate(vLEDchangePos, "pos", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
   xTaskCreate(vLEDchangeSpd, "spd", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY,     NULL);
   xTaskCreate(vSerialRead,   "ser", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY,     NULL);
