@@ -3,43 +3,43 @@
 
 #define ADC4RAND_PIN  PB0
 
-const uint8 pinsZ[]  = { PB14, PB13, PB12 }; // only GPIOB
-const uint8 pinsXY[] = { PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PA8 }; //only GPIOA
+const uint8_t pinsZ[]  = { PB14, PB13, PB12 }; // only GPIOB
+const uint8_t pinsXY[] = { PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PA8 }; //only GPIOA
 
-const unsigned int speedTimer = 10000;
-const unsigned int minInterval = 3;
-const unsigned int maxInterval = minInterval << 6;
-const unsigned int cubeMaxValue = 100;
-const int minMag =  1 << 7;
-const int maxMag = 10 << 7;
+const uint32_t speedTimer = 10000;
+const uint32_t minInterval = 3;
+const uint32_t maxInterval = minInterval << 6;
+const uint32_t cubeMaxValue = 100;
+const int32_t  minMag =  1 << 7;
+const int32_t  maxMag = 10 << 7;
 
-const unsigned int numsZ  = sizeof(pinsZ)  / sizeof(pinsZ[0]);
-const unsigned int numsXY = sizeof(pinsXY) / sizeof(pinsXY[0]);
+const uint32_t numsZ  = sizeof(pinsZ)  / sizeof(pinsZ[0]);
+const uint32_t numsXY = sizeof(pinsXY) / sizeof(pinsXY[0]);
 
-unsigned int cubeValue[numsZ][numsXY] = { 0 };
-int pos[3] = { 0, 0, 0 };
-int dir[3] = { 6, 6, 6 };
-int mag = maxMag;
-int dirMag = (maxMag - minMag) / 20;
-unsigned int interval = maxInterval;
-int dirInterval = -1;
-int enLED = 1;
-int enAutoChgSpeed = 1;
+uint32_t cubeValue[numsZ][numsXY] = { 0 };
+int32_t  pos[3] = { 0, 0, 0 };
+int32_t  dir[3] = { 6, 6, 6 };
+int32_t  mag = maxMag;
+int32_t  dirMag = (maxMag - minMag) / 20;
+uint32_t interval = maxInterval;
+int32_t  dirInterval = -1;
+int32_t  enLED = 1;
+int32_t  enAutoChgSpeed = 1;
 
-uint32 pinMaskZ[numsZ];
-uint32 pinMaskXY[numsXY];
-uint32 pinMaskAllZ = 0;
-uint32 pinMaskAllXY = 0;
+uint32_t pinMaskZ[numsZ];
+uint32_t pinMaskXY[numsXY];
+uint32_t pinMaskAllZ = 0;
+uint32_t pinMaskAllXY = 0;
 SerialCommand sCmd;
-int boardLed = HIGH;
+int32_t boardLed = HIGH;
 
 void setup() {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(ADC4RAND_PIN, INPUT_ANALOG);
   randomSeed(analogRead(ADC4RAND_PIN));
-  for (unsigned int i = 0; i < numsZ;  i++) { pinMode(pinsZ[i],  OUTPUT); pinMaskAllZ  |= pinMaskZ[i]  = digitalPinToBitMask(pinsZ[i]);  }
-  for (unsigned int i = 0; i < numsXY; i++) { pinMode(pinsXY[i], OUTPUT); pinMaskAllXY |= pinMaskXY[i] = digitalPinToBitMask(pinsXY[i]); }
+  for (uint32_t i = 0; i < numsZ;  i++) { pinMode(pinsZ[i],  OUTPUT); pinMaskAllZ  |= pinMaskZ[i]  = digitalPinToBitMask(pinsZ[i]);  }
+  for (uint32_t i = 0; i < numsXY; i++) { pinMode(pinsXY[i], OUTPUT); pinMaskAllXY |= pinMaskXY[i] = digitalPinToBitMask(pinsXY[i]); }
 
   sCmd.addCommand("1", []() { enLED = 1; Serial.println("on"); });
   sCmd.addCommand("0", []() { enLED = 0; Serial.println("off"); });
@@ -58,10 +58,10 @@ void setup() {
 void vLEDshow(void *pvParams) {
   while (1) {
     if (enLED) {
-      for (unsigned int i = cubeMaxValue - 1; i > 0; i--) {
-        for (unsigned int z = 0; z < numsZ; z++) {
-          uint32 pinMaskXYshow = 0;
-          for (unsigned int xy = 0; xy < numsXY; xy++) if (cubeValue[z][xy] > i) pinMaskXYshow |= pinMaskXY[xy];
+      for (uint32_t i = cubeMaxValue - 1; i > 0; i--) {
+        for (uint32_t z = 0; z < numsZ; z++) {
+          uint32_t pinMaskXYshow = 0;
+          for (uint32_t xy = 0; xy < numsXY; xy++) if (cubeValue[z][xy] > i) pinMaskXYshow |= pinMaskXY[xy];
           GPIOB->regs->BRR  = pinMaskAllZ;
           GPIOA->regs->BSRR = pinMaskAllXY;
           GPIOB->regs->BSRR = pinMaskZ[z];
@@ -78,17 +78,17 @@ void vLEDshow(void *pvParams) {
 void vLEDchangePos(void *pvParams) {
   while (1) {
     if (enLED) {
-      for (unsigned int z = 0; z < numsZ; z++) {
-        for (unsigned int xy = 0; xy < numsXY; xy++) {
-          unsigned int dx = (xy / numsZ << 7) - pos[0];
-          unsigned int dy = (xy % numsZ << 7) - pos[1];
-          unsigned int dz =          (z << 7) - pos[2];
-          unsigned int dist = ((dx * dx + dy * dy + dz * dz) * mag >> 14) * mag >> 14;
+      for (uint32_t z = 0; z < numsZ; z++) {
+        for (uint32_t xy = 0; xy < numsXY; xy++) {
+          uint32_t dx = (xy / numsZ << 7) - pos[0];
+          uint32_t dy = (xy % numsZ << 7) - pos[1];
+          uint32_t dz =          (z << 7) - pos[2];
+          uint32_t dist = ((dx * dx + dy * dy + dz * dz) * mag >> 14) * mag >> 14;
           cubeValue[z][xy] = cubeMaxValue / (dist ? dist : 1);
         }
       }
-      for (unsigned int i = 0; i < 3; i++) {
-        if ((pos[i] += dir[i]) > (int)(numsZ - 1 << 7)) {
+      for (uint32_t i = 0; i < 3; i++) {
+        if ((pos[i] += dir[i]) > (int32_t)(numsZ - 1 << 7)) {
           pos[i] = numsZ - 1 << 7;
           dir[i] = -random(2, 16);
         } else if (pos[i] < 0) {
