@@ -6,6 +6,7 @@ AWS.config.update({
 });
 
 sgID   = "sg-xxxxxxxxxxxxxxxx";
+getgIP = "https://xxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/prod";
 
 // ecs
 serviceName = "xxxx-selenium"
