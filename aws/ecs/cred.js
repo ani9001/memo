@@ -5,6 +5,8 @@ AWS.config.update({
  region:         'ap-northeast-1'
 });
 
+sgID   = "sg-xxxxxxxxxxxxxxxx";
+
 // ecs
 serviceName = "xxxx-selenium"
 clusterName = "xxxx-selenium"
