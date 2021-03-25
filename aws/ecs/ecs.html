@@ -1,0 +1,137 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>ecs</title><style>
+body  { background-color:#111; color:#ddd; }
+input { background-color:#444; border:none; padding:5px 10px; color:#ddd; }
+button{ background-color:#44a; border:none; padding:10px 24px; margin:8px 10px; font-size:12px; color:#ddd; text-align:center; text-decoration:none;
+ cursor:pointer; box-shadow:0 4px #666; display:inline-block; border-radius:4px; font-weight:bold; }
+.sm   { background-color:#348; padding:6px 14px; margin:10px; font-size:11px; font-weight:normal; }
+.pr   { background-color:#66d; color:#fdd; }
+button:active  { box-shadow:0 1px #444; transform:translateY(3px); }
+</style></head><body>
+[ecs]<br>
+<button id="us1" onclick="updateService(1)" class="pr">start ecs task</button> <button id="us0" onclick="updateService()">stop ecs task</button>
+task count : <input id="tc" type="text" size="1" placeholder="count" readonly> , state : <input id="ts" type="text" size="12" placeholder="state" readonly>
+, gIP : <input id="ti" type="text" size="20" placeholder="gIP" readonly> <button id="lt" onclick="listTasks()">show ecs task count</button> <code id="status4"></code><br>
+<hr>
+<button onclick="revokeSecurityGroup()" class="sm">[DELETE] revoke security group ingress</button><input id="og" type="text" size="20" placeholder="gIP/cidr"><br>
+<button onclick="authorizeSecurityGroup()" class="sm">[ADD] authorize security group ingress</button><input id="g" type="text" size="20" placeholder="gIP/cidr"><br>
+<button onclick="loadCred()" class="sm">load another cred.js</button><input id="f" type="file" accept=".js,.txt,text/*"><br>
+result: <code id="status"></code>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.389.0.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="./cred.js"></script>
+<script>
+$('#og').val(localStorage.getItem("gIP"));
+credLoaded();
+function credLoaded() {
+ $('#p').val(pw);
+ listTasks();
+ $.get(getgIP).done((data, status, jqxhr) => $("#g").val(data + "/32").css('color', $('#og').val().length ? ($('#og').val() != $("#g").val()) ? '#f66' : '#88f' : '#ddd'));
+}
+function loadCred() {
+ if (!$('#f')[0].files.length) { showStatus("no file selected!", "red", 900); return; }
+ var script = document.createElement('script');
+ var reader = new FileReader();
+ reader.onload = () => {
+  script.innerHTML = reader.result;
+  document.body.appendChild(script);
+  script.onload = credLoaded();
+ }
+ reader.readAsText($('#f')[0].files[0]);
+}
+
+function updateService(taskCount = 0) {
+ var params = { service:serviceName, cluster:clusterName, desiredCount:taskCount };
+ var params2 = { serviceName:serviceName, cluster:clusterName };
+ var ecs = new AWS.ECS();
+ showStatus("[1/2] update Service", "#fd8", -1, 4);
+ ecs.updateService(params, (err, data) => {
+  if (err) showStatus(err, "red", 10000);
+  else {
+   showStatus("[2/2] waiting for Task...", "#8fd", -1, 4);
+   var checkCount = 0;
+   var id = setInterval(() => ecs.listTasks(params2, (err, data) => {
+    if (err) showStatus(err, "red", 3000, 4);
+    else {
+     if (data.taskArns.length == taskCount) {
+      if (taskCount) {
+       ecs.describeTasks({ tasks:[data.taskArns[0]], cluster:clusterName }, (err, data) => {
+        if (err) showStatus(err, "red", 10000, 4);
+        else {
+         $('#ts').val(data.tasks[0].lastStatus);
+         if (data.tasks[0].lastStatus == "RUNNING") {
+          clearInterval(id);
+          listTasks();
+          showStatus("done.", "#8df", 10000, 4);
+         }
+        }
+       });
+      } else {
+       clearInterval(id);
+       listTasks();
+       showStatus("done.", "#8df", 10000, 4);
+      }
+     }
+    }
+    if (checkCount++ > 60) { // 300s
+     clearInterval(id);
+     showStatus("timed out", "red", 10000, 4);
+    }
+   }), 5000); // 5s
+  }
+ });
+}
+function listTasks() {
+ var params = { serviceName:serviceName, cluster:clusterName };
+ var ecs = new AWS.ECS();
+ ecs.listTasks(params, (err, data) => {
+  if (err) showStatus(err, "red", 10000);
+  else {
+   $('#tc').val(data.taskArns.length);
+   if (data.taskArns.length) {
+    $('#us1').removeClass('pr');
+    $('#us0').addClass('pr');
+    ecs.describeTasks({ tasks:[data.taskArns[0]], cluster:clusterName }, (err, data) => {
+     if (err) showStatus(err, "red", 10000);
+     else {
+      $('#ts').val(data.tasks[0].lastStatus);
+      (new AWS.EC2()).describeNetworkInterfaces({ NetworkInterfaceIds:[data.tasks[0].attachments[0].details.find(i => i.name == 'networkInterfaceId').value] },
+       (err, data) => { if (err) showStatus(err, "red", 10000); else $('#ti').val(data.NetworkInterfaces[0].Association.PublicIp); });
+     }
+    });
+   } else {
+    $('#us1').addClass('pr');
+    $('#us0').removeClass('pr');
+    $('#ts').val('');
+    $('#ti').val('');
+   }
+   showStatus("ok.");
+  }
+ });
+}
+function revokeSecurityGroup() {
+ if ($('#og').val().length < 9) { showStatus("gIP not set!", "red", 900); return; }
+ var params = { GroupId:sgID, IpPermissions:[{ IpProtocol:"-1", IpRanges:[{ CidrIp:$('#og').val() }] }]};
+ (new AWS.EC2()).revokeSecurityGroupIngress(params, (err, data) => {
+  if (err) showStatus(err, "red", 10000);
+  else {
+   localStorage.removeItem('gIP');
+   showStatus("ok.");
+  }
+ });
+}
+function authorizeSecurityGroup() {
+ if ($('#g').val().length < 9) { showStatus("gIP not set!", "red", 900); return; }
+ var params = { GroupId:sgID, IpPermissions:[{ IpProtocol:"-1", IpRanges:[{ CidrIp:$('#g').val(), Description:(new Date).toLocaleString() }] }]};
+ (new AWS.EC2()).authorizeSecurityGroupIngress(params, (err, data) => {
+  if (err) showStatus(err, "red", 10000);
+  else {
+   localStorage.setItem('gIP', $('#g').val());
+   showStatus("ok.");
+  }
+ });
+}
+function showStatus(text, color = '#8fa', delayms = 600, index = "") {
+ $('#status' + index).text(text).css('color', color).stop(true, true);
+ if (delayms > -1) $('#status' + index).fadeIn("fast", () => $('#status' + index).delay(delayms).fadeOut("fast"));
+}
+</script></body></html>
