@@ -5,14 +5,14 @@ uint16_t *globalVar = nullptr;
 void *operator new(size_t size) { return pvPortMalloc(size); }
 void operator delete(void *ptr) { vPortFree(ptr); }
 
-class testClass
-{
+class testClass {
   public:
-    testClass() {}
+    testClass() : count(0), test(0) {}
     ~testClass() {}
     uint16_t inc() { return ++count; }
   private:
-    uint16_t count = 0;
+    uint16_t count;
+    uint8_t  test;
 };
 
 testClass *globalClass = nullptr;
@@ -32,6 +32,7 @@ void vLoop1(void *pvParams) {
     if (!globalVar) {
       vTaskDelay(500);
       globalVar = (uint16_t *)pvPortMalloc(64);
+      memset(globalVar, 0, 64);
       Serial.println("pvPortMalloc: globalVar");
     }
     else if(++(*globalVar) & 0x0400) {
@@ -49,6 +50,7 @@ void vLoop2(void *pvParams) {
     if (!localVar) {
       vTaskDelay(500);
       localVar = (uint16_t *)pvPortMalloc(8);
+      memset(localVar, 0, 8);
       Serial.println("pvPortMalloc: localVar");
     }
     else if(++(*localVar) & 0x0800) {
