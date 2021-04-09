@@ -49,12 +49,6 @@ if [ "$channelId" != "" -a "$apiKey" != "" ]; then
   rm -f "$tempFile"
   if [ ${#latestIdTitle} -ge 16 ]; then execAlarm=1; fi
  fi
- curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&eventType=upcoming&type=video&maxResults=3&key=${apiKey}" | jq -r '.items[0] | [ .id.videoId, .snippet.title ] | @csv' | sed 's/"//g' > "$tempFile"
- if [[ -f "$tempFile" ]]; then
-  latestIdTitle=$(<$tempFile)
-  rm -f "$tempFile"
-  if [ ${#latestIdTitle} -ge 16 ]; then execAlarm=1; fi
- fi
 fi
 
 if [ "$execAlarm" != "0" ]; then
