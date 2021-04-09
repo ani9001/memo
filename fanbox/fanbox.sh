@@ -26,9 +26,9 @@ if [ $((nowTotalMin % nowExecInterval)) -ne 0 ]; then exit 0; fi
 
 if [ "$name" = "" ]; then if [[ "${confFile}" =~ ^.*\.([^\.]+)\.conf$ ]]; then name=".${BASH_REMATCH[1]}"; fi; fi
 if [[ -d "$tmpDir" ]]; then tempFile="$tmpDir/$(basename $0 .sh)${name}.tmp.txt"; else tempFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.tmp.txt"; fi
-idTitleFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.last.txt"
 
 execAlarm=0
+idTitleFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.last.txt"
 curl -s "https://api.fanbox.cc/post.listCreator?creatorId=${creatorId}&limit=1" -H 'Origin: https://www.fanbox.cc' | jq -r '.body.items[] | [ .id, .title ] | @csv' | sed 's/"//g' > "$tempFile"
 if [[ -f "$tempFile" ]]; then
  latestIdTitle=$(<$tempFile)
@@ -42,12 +42,15 @@ if [[ -f "$tempFile" ]]; then
  fi
 fi
 
+idTitleFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.ylast.txt"
 if [ "$channelId" != "" -a "$apiKey" != "" ]; then
  curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&eventType=live&type=video&maxResults=3&key=${apiKey}" | jq -r '.items[0] | [ .id.videoId, .snippet.title ] | @csv' | sed 's/"//g' > "$tempFile"
  if [[ -f "$tempFile" ]]; then
   latestIdTitle=$(<$tempFile)
   rm -f "$tempFile"
-  if [ ${#latestIdTitle} -ge 16 ]; then execAlarm=1; fi
+  if [[ ! -f "$idTitleFile" ]]; then echo -n "$latestIdTitle" >"$idTitleFile"; fi
+  lastIdTitle=$(<$idTitleFile)
+  if [ "$lastIdTitle" != "$latestIdTitle" -a ${#latestIdTitle} -ge 16 ]; then execAlarm=1; fi
  fi
 fi
 
