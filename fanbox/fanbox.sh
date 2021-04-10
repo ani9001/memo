@@ -21,36 +21,44 @@ if [ "$creatorId" = "" ]; then exit 1; fi
 nowHour=$(date "+%H")
 nowExecInterval=$(getNowInterval $nowHour "$execInterval")
 if [ "$nowExecInterval" = "" ]; then exit 1; fi
+nowExecIntervalY=$(getNowInterval $nowHour "$execIntervalY")
 nowTotalMin=$(($(date "+%s") / 60 + 60 * 9))
-if [ $((nowTotalMin % nowExecInterval)) -ne 0 ]; then exit 0; fi
+if [ $((nowTotalMin % nowExecInterval)) -ne 0 -a $((nowTotalMin % nowExecIntervalY)) -ne 0 ]; then exit 0; fi
 
 if [ "$name" = "" ]; then if [[ "${confFile}" =~ ^.*\.([^\.]+)\.conf$ ]]; then name=".${BASH_REMATCH[1]}"; fi; fi
 if [[ -d "$tmpDir" ]]; then tempFile="$tmpDir/$(basename $0 .sh)${name}.tmp.txt"; else tempFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.tmp.txt"; fi
 
 execAlarm=0
-idTitleFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.last.txt"
-curl -s "https://api.fanbox.cc/post.listCreator?creatorId=${creatorId}&limit=1" -H 'Origin: https://www.fanbox.cc' | jq -r '.body.items[] | [ .id, .title ] | @csv' | sed 's/"//g' > "$tempFile"
-if [[ -f "$tempFile" ]]; then
- latestIdTitle=$(<$tempFile)
- nowCount=$(iconv -f $checkUrlCharSet -t UTF8 $tempFile | grep -oP "$checkPattern" | wc -l)
- rm -f "$tempFile"
- if [[ ! -f "$idTitleFile" ]]; then echo -n "$latestIdTitle" >"$idTitleFile"; fi
- lastIdTitle=$(<$idTitleFile)
- if [ "$lastIdTitle" != "$latestIdTitle" -a "$nowCount" != "0" ]; then
-  execAlarm=1
-  echo -n "$latestIdTitle" >"$idTitleFile"
- fi
-fi
-
-idTitleFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.ylast.txt"
-if [ "$channelId" != "" -a "$apiKey" != "" ]; then
- curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&eventType=live&type=video&maxResults=3&key=${apiKey}" | jq -r '.items[0] | [ .id.videoId, .snippet.title ] | @csv' | sed 's/"//g' > "$tempFile"
+if [ $((nowTotalMin % nowExecInterval)) -eq 0 ]; then
+ idTitleFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.last.txt"
+ curl -s "https://api.fanbox.cc/post.listCreator?creatorId=${creatorId}&limit=1" -H 'Origin: https://www.fanbox.cc' | jq -r '.body.items[] | [ .id, .title ] | @csv' | sed 's/"//g' > "$tempFile"
  if [[ -f "$tempFile" ]]; then
   latestIdTitle=$(<$tempFile)
+  nowCount=$(iconv -f $checkUrlCharSet -t UTF8 $tempFile | grep -oP "$checkPattern" | wc -l)
   rm -f "$tempFile"
   if [[ ! -f "$idTitleFile" ]]; then echo -n "$latestIdTitle" >"$idTitleFile"; fi
   lastIdTitle=$(<$idTitleFile)
-  if [ "$lastIdTitle" != "$latestIdTitle" -a ${#latestIdTitle} -ge 16 ]; then execAlarm=1; fi
+  if [ "$lastIdTitle" != "$latestIdTitle" -a "$nowCount" != "0" ]; then
+   execAlarm=1
+   echo -n "$latestIdTitle" >"$idTitleFile"
+  fi
+ fi
+fi
+
+if [ $((nowTotalMin % nowExecIntervalY)) -eq 0 ]; then
+ idTitleFile="$SCRIPT_DIR/$(basename $0 .sh)${name}.ylast.txt"
+ if [ "$channelId" != "" -a "$apiKey" != "" ]; then
+  curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&eventType=live&type=video&maxResults=1&key=${apiKey}" | jq -r '.items[0] | [ .id.videoId, .snippet.title ] | @csv' | sed 's/"//g' > "$tempFile"
+  if [[ -f "$tempFile" ]]; then
+   latestIdTitle=$(<$tempFile)
+   rm -f "$tempFile"
+   if [[ ! -f "$idTitleFile" ]]; then echo -n "$latestIdTitle" >"$idTitleFile"; fi
+   lastIdTitle=$(<$idTitleFile)
+   if [ "$lastIdTitle" != "$latestIdTitle" -a ${#latestIdTitle} -ge 16 ]; then
+    execAlarm=1
+    echo -n "$latestIdTitle" >"$idTitleFile"
+   fi
+  fi
  fi
 fi
 
