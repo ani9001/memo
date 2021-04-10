@@ -1,0 +1,107 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>inet-ctrl2</title><style>
+body  { background-color:#111; color:#ddd; }
+button{ background-color:#45d; border:none; padding:6px 24px; margin:8px 10px; font-size:12px; color:#ddd; text-align:center; text-decoration:none;
+ cursor:pointer; box-shadow:0 4px #666; display:inline-block; border-radius:4px; font-weight:bold; }
+button:active  { box-shadow:0 1px #666; transform:translateY(3px); }
+#p,#q,#r { display:flex; flex-flow:row wrap; }
+.f { padding:0 5px; }
+.s { padding:0 12px; color:#8af; }
+select,input { background-color:#555; color:#eee; border:solid 1px #333; font-size:12px; }
+</style></head><body>
+◆ gpiom (inet) :<br><div id="p"></div>status result:<br><pre id="r"></pre>(local nw only)<br><div id="q"></div><hr>
+ver: <code id="v"></code>, result: <code id="s"></code>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script>
+var apiBaseUrl  = "https://your-api.execute-api.ap-northeast-1.amazonaws.com/prod/";
+var gpioPath    = "gpiom.ctrl";
+var gpioResPath = "gpiom.res";
+var apiLocalUrl = "http://gpiom/api";
+var gpioMaxNum  = 4;
+[...Array(gpioMaxNum).keys()].forEach(p => {
+ $('#p').append('<div class="f">pin ' + p + '<br><select id="p' + p + `" size="7"><option value="_" selected>no change</option>
+ <option value="1">1 : high</option><option value="0">0 : low</option><option value="B">fast blink</option><option value="b">blink</option>
+ <option value="Z">high buzzer</option><option value="z">low buzzer</option></select></div>`);
+ $('#q').append('<div class="f">pin ' + p + ` /
+ mode :<br><select id="m` + p + `" size="6"><option value="" selected>no change</option><option value="0">0 : input</option><option value="1">1 : output</option>
+ <option value="2">2 : in-pullup</option><option value="3">out-opendrain</option><option value="4">in-pulldown-16</option></select><br>
+ val :<br><select id="v` + p + `" size="3"><option value="" selected>no change</option><option value="1">1 : high</option><option value="0">0 : low</option></select><br>
+ duty : <input id="d` + p + `" type="number" min="0" max="100" size="4"><br>freq : <input id="f` + p + `" type="number" min="0" max="4000" step="0.5" size="6"><br>
+ action : <input id="a` + p + `" type="text" size="2" pattern="^[0-9A-Fa-f]{1,2}$"><br>trig : <input type="checkbox" id="t` + p + '">clear</div>');
+});
+$('#p').append(`<div class="f">status<br><input type="checkbox" id="ps">request</div><div class="f"><button onclick="gpio()">send ctrl</button></div>
+<div class="f"><button onclick="apig(gpioPath)">get ctrl</button><br><button onclick="gpiop('')">clear ctrl</button></div>`);
+$('#q').append(`<div class="f">system<br>ota : <input type="checkbox" id="qo">start<br>
+inet :<br><select id="qi" size="3"><option value="" selected>no change</option><option value="1">enable</option><option value="0">disable</option></select><br><br>
+status :<br><input type="checkbox" id="qs">request (via inet)<br><br>*duty 0-100 %<br>*freq .0005-4000 Hz<br>*action 00-ff<br>: 00 disable</div>
+<div class="f"><button onclick="gpiol()">send ctrl</button><br><br><br><br><br><br><br>: action bits<br>b7:5 trigger count<br>~ n-power (2^n)<br>b4:1 dest pin<br>b0 val</div>`);
+$('#v').append(document.lastModified);
+function gpiol(p = 0) {
+ var m = "", s = "", cb, cbs;
+ if (p < gpioMaxNum) {
+  var d, f, a;
+  if ((d = parseInt($('#d' + p).val(), 10)) < 0   || d > 100  || !$('#d' + p).val()) d = -1;
+  if ((f = parseFloat($('#f' + p).val())) < .0005 || f > 4000 || !$('#f' + p).val()) f = -1;
+  if ((a = parseInt($('#a' + p).val(), 16)) < 0   || a > 255  || !$('#a' + p).val()) a = -1;
+  if ($('#m' + p).val() || $('#v' + p).val() || d >= 0 || f >= 0 || a >= 0 || $('#t' + p).prop('checked')) {
+   m = "d=" + p;
+   if ($('#m' + p).val()) m += "&mode=" + $('#m' + p).val();
+   if ($('#v' + p).val()) m += "&val="  + $('#v' + p).val();
+   if (d >= 0) m += "&duty=" + d;
+   if (f >= 0) m += "&freq=" + f;
+   if (a >= 0) m += "&action=" + a;
+   if ($('#t' + p).prop('checked')) m += "&trig=0";
+   cb = () => { shSta("ok. : pin " + p); gpiol(p + 1); }
+  } else gpiol(p + 1);
+ } else {
+  if ($('#qo').prop('checked') || $('#qi').val()) {
+   if ($('#qo').prop('checked')) m = "ota=1";
+   if ($('#qi').val()) m += "&inet=" + $('#qi').val();
+   cb = () => shSta("ok. : system");
+  }
+  if ($('#qs').prop('checked')) {
+   s = "_".repeat(gpioMaxNum) + ":" + (new Date).valueOf();
+   cbs = () => {
+    shSta("posted.", '#fa8');
+    getGpioSta(s.substring(gpioMaxNum)).then(() => shSta("ok."), err => shSta(err, 'red', 10000));
+   }
+  } }
+ if (m.length) $.post(apiLocalUrl, m, cb).fail((j, t, e) => { if (j.status == 0 && t == "error" && !e) cb(); else shSta(j.status + ', ' + t + ', ' + e, 'red'); });
+ if (s.length) gpiop(s, cbs);
+}
+function gpio() {
+ var m = "", cb;
+ [...Array(gpioMaxNum).keys()].forEach(p => m += $('#p' + p).val());
+ if ($('#ps').prop('checked')) {
+  m += ":" + (new Date).valueOf();
+  cb = () => {
+   shSta("posted.", '#fa8');
+   getGpioSta(m.substring(gpioMaxNum)).then(() => shSta("ok."), err => shSta(err, 'red', 10000));
+  }
+ } else cb = () => shSta("ok.");
+ gpiop(m, cb);
+}
+const getGpioSta = (s, tryCount = 0) => new Promise((res, rej) => wait(5000).then(() => $.get(apiBaseUrl + gpioResPath).done((data, textStatus, jqXHR) => {
+ shSta(".", '#fa8');
+ const retry = () => { if (++tryCount < 24) getGpioSta(s, tryCount).then(() => res(), err => rej(err)); else rej("failed."); }
+ if (jqXHR.status == 200) {
+  if (data.slice(-s.length) == s) {
+   $('#r').empty();
+   var apiRes = data.split(';'), apiPin, apiSys;
+   [...Array(gpioMaxNum).keys()].forEach(p => { if (apiRes.length > p && (apiPin = apiRes[p].split(',')).length > 5) $('#r').append('<div class="s">pin ' + p + "<br>"
+    + "mode " + apiPin[0] + "<br>val  : <b>" + apiPin[1] + "</b><br>duty : <b>" + apiPin[2] + "</b><br>freq : <b>" + apiPin[3] + "</b><br>trig : <b>" + apiPin[4]
+	+ "</b><br>action " + apiPin[5] + "</div>");
+   });
+   if (apiRes.length > gpioMaxNum) $('#r').append('<div class="s">pin a0<br>val : <b>' + apiRes[gpioMaxNum] + '</b></div>');
+   if (apiRes.length > gpioMaxNum + 1 && (apiSys = apiRes[gpioMaxNum + 1].split(',')).length > 1) $('#r').append('<div class="s">system<br>feature : ' + apiSys[0]
+    + '<br>uptime  : ' + apiSys[1] + '</div>');
+   res();
+  } else retry();
+ } else retry();
+}).fail(() => retry())));
+const msg4 = (v = '1') => apip(msg4Path, v, () => shSta("ok."));
+const gpiop = (v, c = () => shSta("ok.")) => apip(gpioPath, v, c);
+const apip = (u, m, c) => $.post(apiBaseUrl + u, m, c).fail((j, t, e) => { if (j.status == 0 && t == "error" && !e) c(); else shSta(j.status + ', ' + t + ', ' + e, 'red'); });
+const apig = u => $.get(apiBaseUrl + u).done(d => shSta("ok. : '" + d + "'", '#8af', 5000)).fail(() => shSta("failed.", 'red', 3000));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const shSta = (t, c = '#8fa', d = 3000) => $('#s').text(t).css('color', c).stop(true, true).fadeIn("fast", () => $('#s').delay(d).fadeOut("fast"));
+</script></body></html>
