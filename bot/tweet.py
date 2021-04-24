@@ -1,9 +1,7 @@
 import sys
 sys.path.append('/usr/local/lib/python3.7/site-packages')
 
-import json
 import tweepy
-
 import tweet_bot_token as token
 
 auth = tweepy.OAuthHandler(token.consumer_key, token.consumer_secret)
