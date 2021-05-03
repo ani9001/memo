@@ -12,7 +12,7 @@ curl -X POST -H "Authorization: key=${fcmKey}" -H Content-Type:"application/json
  "registration_ids": [ '${registrationIds}' ],
  "notification": {
   "title": "'${fcmTitle}'",
-  "body": "'${pushBody}'",
+  "body": "'"${pushBody}"'",
   "icon": "'${pushImageUrl}'",
   "click_action": "'${puchClickAction}'"
  }
