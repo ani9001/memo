@@ -1,0 +1,3 @@
+## user32呼んでwindow位置やz-order変更
+<a href="https://twitter.com/ani9001/status/1376845193974927361">参考ツイート</a>
+<blockquote class="twitter-tweet"><p lang="ja" dir="ltr">powershellネタ、user32呼んでwindow位置やz-order変更するやつ<br>バッチファイル内で呼んでるので、titleで(MainWindowTitleを)usbに変更してあり、ProcessNameがcmd、起動時刻が直近10秒以内のを引っ掛けてあります<br>短く書くのが好きなので、分かりづらいかとは思いますが...<a href="https://t.co/Fwgu5MW2ap">https://t.co/Fwgu5MW2ap</a> <a href="https://t.co/HwOPjGhb4z">pic.twitter.com/HwOPjGhb4z</a></p>&mdash; あに (@ani9001) <a href="https://twitter.com/ani9001/status/1376845193974927361?ref_src=twsrc%5Etfw">March 30, 2021</a></blockquote>
