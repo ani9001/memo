@@ -1,0 +1,3 @@
+## fanbox配信記事をツイートしてくれるbot
+<a href="https://twitter.com/ani9001/status/1385763955675598853">参考ツイート</a>
+<blockquote class="twitter-tweet"><p lang="ja" dir="ltr">おりこ先生のfanbox配信記事をツイートしてくれるbotを作りました！（先生ご承知）<br>タイトルに&quot;配信&quot;の文字を含む記事投稿の約20～40分後にツイートします。タグは付けないので見たい方はbotアカウントのフォローなどお願いいたします。<br>配信以外の記事もツイートしたほうが良いでしょうか？<a href="https://twitter.com/hashtag/%E3%81%8A%E3%82%8A%E3%81%93%E7%B3%96?src=hash&amp;ref_src=twsrc%5Etfw">#おりこ糖</a> <a href="https://t.co/bvJX8vJlVZ">https://t.co/bvJX8vJlVZ</a> <a href="https://t.co/ivOMhjWXVA">pic.twitter.com/ivOMhjWXVA</a></p>&mdash; あに (@ani9001) <a href="https://twitter.com/ani9001/status/1385763955675598853?ref_src=twsrc%5Etfw">April 24, 2021</a></blockquote>
