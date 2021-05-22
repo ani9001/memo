@@ -1,0 +1,3 @@
+## esp8266使ったお部屋の時計/温湿度計/降雨予実表示
+<a href="https://twitter.com/ani9001/status/1371793206862516230">参考ツイート</a>
+<blockquote class="twitter-tweet"><p lang="ja" dir="ltr"><a href="https://twitter.com/hashtag/esp8266?src=hash&amp;ref_src=twsrc%5Etfw">#esp8266</a> 使ったお部屋の時計/温湿度計/降雨予実表示。<br>センサ情報はthingspeakにも送っていて、降雨情報はyolp(yahoo天気)へaws lambda/api gateway経由で取得しています。<br>raspberry piあたりに変えたいような、でも面倒なのでこのままでいいような気も？<a href="https://t.co/z1l9EGmycH">https://t.co/z1l9EGmycH</a> <a href="https://t.co/9rtwrqJxqe">pic.twitter.com/9rtwrqJxqe</a></p>&mdash; あに (@ani9001) <a href="https://twitter.com/ani9001/status/1371793206862516230?ref_src=twsrc%5Etfw">March 16, 2021</a></blockquote>
