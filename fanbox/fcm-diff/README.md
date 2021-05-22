@@ -1,0 +1,3 @@
+## Firebase Cloud Messaging（FCM）使って、ブラウザやandroidにpush通知
+<a href="https://twitter.com/ani9001/status/1383631764602507268">参考ツイート</a>
+<blockquote class="twitter-tweet"><p lang="ja" dir="ltr">昨日話したFCM使ってPCとandroidスマホに通知送れました！(試してないけどiphoneも同様？)<br>明日からは配信あったら先日作ったLEDに加えて、画像の通知も届きます笑<br>今は4枚目の画像の通りコマンドベースで通知送れたところまでなので、この後コード作り込んで後ほどupしておこうと思います。<a href="https://twitter.com/hashtag/%E3%81%8A%E3%82%8A%E3%81%93%E7%B3%96?src=hash&amp;ref_src=twsrc%5Etfw">#おりこ糖</a> <a href="https://t.co/jaEugAtyrp">pic.twitter.com/jaEugAtyrp</a></p>&mdash; あに (@ani9001) <a href="https://twitter.com/ani9001/status/1383631764602507268?ref_src=twsrc%5Etfw">April 18, 2021</a></blockquote>
