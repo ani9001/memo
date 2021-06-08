@@ -5,3 +5,7 @@
 ## Firebase Cloud Messaging（FCM）使って、ブラウザやandroidにpush通知（サブフォルダ内のコード）
 <a href="https://twitter.com/ani9001/status/1383631764602507268">参考ツイート</a>
 <blockquote class="twitter-tweet"><p lang="ja" dir="ltr">昨日話したFCM使ってPCとandroidスマホに通知送れました！(試してないけどiphoneも同様？)<br>明日からは配信あったら先日作ったLEDに加えて、画像の通知も届きます笑<br>今は4枚目の画像の通りコマンドベースで通知送れたところまでなので、この後コード作り込んで後ほどupしておこうと思います。<a href="https://twitter.com/hashtag/%E3%81%8A%E3%82%8A%E3%81%93%E7%B3%96?src=hash&amp;ref_src=twsrc%5Etfw">#おりこ糖</a> <a href="https://t.co/jaEugAtyrp">pic.twitter.com/jaEugAtyrp</a></p>&mdash; あに (@ani9001) <a href="https://twitter.com/ani9001/status/1383631764602507268?ref_src=twsrc%5Etfw">April 18, 2021</a></blockquote>
+
+## 監視対象を fanbox, youtube, pixiv sketch, twitter の４つにしました（ファイル名に 210608 が入っている方）
+<a href="https://twitter.com/ani9001/status/1402156164633153536">参考ツイート</a>
+<blockquote class="twitter-tweet"><p lang="ja" dir="ltr">機能追加した配信監視スクリプト、最終版を置いてなかったのでgithubに置きました！<br>ファイル名に210608が入っている2つです。私が使っているコードをほぼそのまま掲載しました。もうこれ以上監視対象増えないと思ってます笑<br>監視対象：fanbox, youtube, pixivSketch, twitter<a href="https://t.co/buxak2QUyp">https://t.co/buxak2QUyp</a></p>&mdash; あに (@ani9001) <a href="https://twitter.com/ani9001/status/1402156164633153536?ref_src=twsrc%5Etfw">June 8, 2021</a></blockquote>
